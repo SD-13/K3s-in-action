@@ -34,7 +34,7 @@ jobs:
         run: curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
       - name: Create cluster
         run: k3d cluster create k3d
-      - name: Verify function of k8s, kubectl, and helm
+      - name: Setup Kubeconfig
         run: |
           echo "::group::Prepare a kubeconfig in ~/.kube/config"
           mkdir -p ~/.kube
@@ -44,8 +44,17 @@ jobs:
           echo "KUBECONFIG=$HOME/.kube/config" >> $GITHUB_ENV
           echo "::endgroup::"
         shell: bash
-      - name: echo Kubeconfig
-        run: echo $KUBECONFIG
+      - name: Installing Helm
+        run: |
+          curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+          chmod 700 get_helm.sh
+          ./get_helm.sh
+      - name: Verify stuff
+        run: |
+          cat $KUBECONFIG
+          helm --help
+          kubectl get pods -A
+
         # echo "kubeconfig: $KUBECONFIG"
           # kubectl version
           # kubectl get pods --all-namespaces
