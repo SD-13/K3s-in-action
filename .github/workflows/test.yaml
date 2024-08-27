@@ -30,7 +30,7 @@ jobs:
       #     /tmp/aws/install --update
       #     rm -rf /tmp/aws/
       #
-      - name: Install k3d
+      - name: Install k3d binary
         run: curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
       - name: Create cluster
         run: k3d cluster create k3d
@@ -38,7 +38,7 @@ jobs:
         run: |
           echo "::group::Prepare a kubeconfig in ~/.kube/config"
           mkdir -p ~/.kube
-          touch ~/.kube/config
+          # touch ~/.kube/config
           k3d kubeconfig get k3d > "$HOME/.kube/config"
           chmod 600 "$HOME/.kube/config"
           echo "KUBECONFIG=$HOME/.kube/config" >> $GITHUB_ENV
