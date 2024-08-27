@@ -10,12 +10,14 @@ jobs:
     container:
       image: mcr.microsoft.com/playwright:v1.45.2-jammy
     steps:
-      - uses: actions/checkout@v4
-        with: 
-          ref: stage
-      # - uses: actions/setup-node@v4
-      #   with:
-      #     node-version: 18
+
+      
+      # - uses: actions/checkout@v4
+      #   with: 
+      #     ref: stage
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
       # - name: Install dependencies
       #   run: npm install
       #
@@ -28,322 +30,174 @@ jobs:
       #     /tmp/aws/install --update
       #     rm -rf /tmp/aws/
       #
-      - name: Create k3s
-        run: curl -sfL https://get.k3s.io | sh -
-
-      - name: create kubeconfig
-        run: mkdir ~/.kube && touch ~/.kube/config
-
-      - name: Copy Kubeconfig
-        run: ls /etc/rancher/k3s/k3s.yaml
-
-      - name: Install dependencies
-        run: npm ci
-      
-      - name: Install Playwright Browsers
-        run: npx playwright install chromium --with-deps
-
-      - name: Run Tests in Stage environment 
-        run: npm run test-cases:stage
-        continue-on-error: true
-        env:
-          EMAIL_STAGE: '${{ secrets.EMAIL_STAGE }}'
-          PASSWORD_STAGE: '${{ secrets.PASSWORD_STAGE }}'
-          SECRET_STAGE: '${{ secrets.SECRET_STAGE }}'
-          URL_STAGE: '${{ secrets.URL_STAGE }}'
-          DEMO_CLOUD_AWS_ACCESS_KEY_ID: '${{ secrets.DEMO_CLOUD_AWS_ACCESS_KEY_ID }}'
-          DEMO_CLOUD_AWS_SECRET_ACCESS_KEY: '${{ secrets.DEMO_CLOUD_AWS_SECRET_ACCESS_KEY }}'
-
-      - name: Get current Time
-        uses: josStorer/get-current-time@v2
-        id: current-time
+      - name: Start a local k8s cluster
+        uses: jupyterhub/action-k3s-helm@v4
         with:
-         format: DDMMYYYY-HHmm
-         timezone: Asia/Kolkata
-         
-      - name: Export time to Github Env
-        run: |
-          echo "F_TIME=${{ steps.current-time.outputs.formattedTime }}" >> $GITHUB_ENV
+        # See available:
+        # - k3s release channels at https://github.com/k3s-io/k3s/blob/HEAD/channel.yaml
+        # - k3s versions at https://github.com/k3s-io/k3s/tags
+        # - helm versions at https://github.com/helm/helm/tags
+          k3s-channel: latest
+        # k3s-version: v1.29.0+k3s1
+        # helm-version: v3.13.0
 
-      - name: Export vars to Github Env
-        run: | 
-          echo "HTML_REPORT=./reports/stage-report/report-${{ env.F_TIME }}.html" >> $GITHUB_ENV
-          echo "JSON_REPORT=./reports/stage-report/report-${{ env.F_TIME }}.json" >> $GITHUB_ENV
+      - name: Verify function of k8s, kubectl, and helm
+        run: |
+          echo "kubeconfig: $KUBECONFIG"
+          kubectl version
+          kubectl get pods --all-namespaces
+
+          helm version
+          helm list
+
+      # - name: Create k3s
+      #   run: curl -sfL https://get.k3s.io | sh -
+
+      # - name: create kubeconfig
+      #   run: mkdir ~/.kube && touch ~/.kube/config
+
+      # - name: Copy Kubeconfig
+      #   run: ls /etc/rancher/k3s/k3s.yaml
+
+      # - name: Install dependencies
+      #   run: npm ci
+      
+      # - name: Install Playwright Browsers
+      #   run: npx playwright install chromium --with-deps
+
+      # - name: Run Tests in Stage environment 
+      #   run: npm run test-cases:stage
+      #   continue-on-error: true
+      #   env:
+      #     EMAIL_STAGE: '${{ secrets.EMAIL_STAGE }}'
+      #     PASSWORD_STAGE: '${{ secrets.PASSWORD_STAGE }}'
+      #     SECRET_STAGE: '${{ secrets.SECRET_STAGE }}'
+      #     URL_STAGE: '${{ secrets.URL_STAGE }}'
+      #     DEMO_CLOUD_AWS_ACCESS_KEY_ID: '${{ secrets.DEMO_CLOUD_AWS_ACCESS_KEY_ID }}'
+      #     DEMO_CLOUD_AWS_SECRET_ACCESS_KEY: '${{ secrets.DEMO_CLOUD_AWS_SECRET_ACCESS_KEY }}'
+
+      # - name: Get current Time
+      #   uses: josStorer/get-current-time@v2
+      #   id: current-time
+      #   with:
+      #    format: DDMMYYYY-HHmm
+      #    timezone: Asia/Kolkata
+         
+      # - name: Export time to Github Env
+      #   run: |
+      #     echo "F_TIME=${{ steps.current-time.outputs.formattedTime }}" >> $GITHUB_ENV
+
+      # - name: Export vars to Github Env
+      #   run: | 
+      #     echo "HTML_REPORT=./reports/stage-report/report-${{ env.F_TIME }}.html" >> $GITHUB_ENV
+      #     echo "JSON_REPORT=./reports/stage-report/report-${{ env.F_TIME }}.json" >> $GITHUB_ENV
           
-      - name: Attach Timestamp to the Report file
-        run: | 
-         mv ./reports/stage-report/report.html ${{ env.HTML_REPORT }}
-         mv ./reports/stage-report/report.json ${{ env.JSON_REPORT }}
+      # - name: Attach Timestamp to the Report file
+      #   run: | 
+      #    mv ./reports/stage-report/report.html ${{ env.HTML_REPORT }}
+      #    mv ./reports/stage-report/report.json ${{ env.JSON_REPORT }}
          
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-         name: stage-report
-         path: reports/
-         retention-days: 30
+      # - uses: actions/upload-artifact@v4
+      #   if: always()
+      #   with:
+      #    name: stage-report
+      #    path: reports/
+      #    retention-days: 30
   
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4 # Configure with AWS Credentials
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+      # - name: Configure AWS credentials
+      #   uses: aws-actions/configure-aws-credentials@v4 # Configure with AWS Credentials
+      #   with:
+      #     aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      #     aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      #     aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Copy files to the S3 Bucket
-        run: |
-             aws s3 cp ${{ env.HTML_REPORT }} s3://reports.accuknox.com/reports/stage/
-             echo "::notice title=HTML report url for Stage Env::http://reports.accuknox.com/reports/stage/report-${{ env.F_TIME }}.html"
+      # - name: Copy files to the S3 Bucket
+      #   run: |
+      #        aws s3 cp ${{ env.HTML_REPORT }} s3://reports.accuknox.com/reports/stage/
+      #        echo "::notice title=HTML report url for Stage Env::http://reports.accuknox.com/reports/stage/report-${{ env.F_TIME }}.html"
       
-      - name: Read Summary Report to Get Test Results
-        if: always()
-        run: |
-            TOTAL_TESTS=$(cat ${{ env.JSON_REPORT }} | jq -r '.summary.tests.value')
-            PASSED=$(cat ${{ env.JSON_REPORT }} | jq -r '.summary.passed.value')
-            FAILED=$(cat ${{ env.JSON_REPORT }} | jq -r '.summary.failed.value')
-            FLAKY=$(cat ${{ env.JSON_REPORT }} | jq -r '.summary.flaky.value')
-            SKIPPED=$(cat ${{ env.JSON_REPORT }} | jq -r '.summary.skipped.value')
-            TOTAL_TIME=$(cat ${{ env.JSON_REPORT }} | jq -r '.durationH')
+      # - name: Read Summary Report to Get Test Results
+      #   if: always()
+      #   run: |
+      #       TOTAL_TESTS=$(cat ${{ env.JSON_REPORT }} | jq -r '.summary.tests.value')
+      #       PASSED=$(cat ${{ env.JSON_REPORT }} | jq -r '.summary.passed.value')
+      #       FAILED=$(cat ${{ env.JSON_REPORT }} | jq -r '.summary.failed.value')
+      #       FLAKY=$(cat ${{ env.JSON_REPORT }} | jq -r '.summary.flaky.value')
+      #       SKIPPED=$(cat ${{ env.JSON_REPORT }} | jq -r '.summary.skipped.value')
+      #       TOTAL_TIME=$(cat ${{ env.JSON_REPORT }} | jq -r '.durationH')
             
 
-            echo "TOTAL_TESTS=$TOTAL_TESTS" >> $GITHUB_ENV
-            echo "PASSED=$PASSED" >> $GITHUB_ENV
-            echo "FAILED=$FAILED" >> $GITHUB_ENV 
-            echo "FLAKY=$FLAKY" >> $GITHUB_ENV
-            echo "SKIPPED=$SKIPPED" >> $GITHUB_ENV
-            echo "TOTAL_TIME=$TOTAL_TIME" >> $GITHUB_ENV
+      #       echo "TOTAL_TESTS=$TOTAL_TESTS" >> $GITHUB_ENV
+      #       echo "PASSED=$PASSED" >> $GITHUB_ENV
+      #       echo "FAILED=$FAILED" >> $GITHUB_ENV 
+      #       echo "FLAKY=$FLAKY" >> $GITHUB_ENV
+      #       echo "SKIPPED=$SKIPPED" >> $GITHUB_ENV
+      #       echo "TOTAL_TIME=$TOTAL_TIME" >> $GITHUB_ENV
 
-      - name: Send Slack Notification
-        if: always()
-        uses: 8398a7/action-slack@v3
-        with:
-            icon_url: 'https://icons8.com/icon/VzEme0vRm6Aj/test'
-            status: custom
-            fields: repo,eventName,workflow,job,took
-            custom_payload: |
-             {
-              attachments: [{
-                color: '${{ env.PASSED }}' === '0' ? 'good' : '${{ env.FAILED }}' === '0' ? 'danger' : 'warning',
-                title: `E2E UI Testing: Stage Env :mag_right:`,
-                fields: [{
-                  title: 'Site Under Test',
-                  value: '${{ env.APP_URL }}',
-                  short: true
-                },
-                {
-                  title: 'Repo',
-                  value: `${process.env.AS_REPO}`,
-                  short: true
-                },
-                {
-                  title: 'Execution Time',
-                  value: `${{ env.TOTAL_TIME }}`,
-                  short: true
-                },
-                {
-                  title: 'Workflow',
-                  value: `${process.env.AS_WORKFLOW}`,
-                  short: true
-                },
-                {
-                  title: 'Total Tests',
-                  value: `${{ env.TOTAL_TESTS }}`,
-                  short: true
-                },
-                {
-                  title: 'Passed',
-                  value: `${{ env.PASSED }}`,
-                  short: true
-                },
-                {
-                  title: 'Skipped',
-                  value: `${{ env.SKIPPED }}`,
-                  short: true
-                },
-                {
-                  title: 'Flaky',
-                  value: `${{ env.FLAKY }}`,
-                  short: true
-                },
-                {
-                  title: 'Failures',
-                  value: `${{ env.FAILED }}`,
-                  short: false
-                },
-                {
-                  title: 'Stage Test Report URL',
-                  value: 'http://reports.accuknox.com/reports/stage/report-${{ env.F_TIME }}.html',
-                  short: false
-                }]
-              }]
-             }
-        env:
-              SLACK_WEBHOOK_URL: ${{ secrets.STAGE_SLACK_WEBHOOK }} # required
-              APP_URL: "https://app.stage.accuknox.com/"
-  
-
-  demoTesting:
-    name: 'Demo Testing'
-    runs-on: ubuntu-latest
-    container:
-      image: mcr.microsoft.com/playwright:v1.45.2-jammy
-    steps:
-      - uses: actions/checkout@v4
-        with: 
-          ref: demo
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 18
-      - name: Install dependencies
-        run: npm install
-
-      - name: Install AWS CLI v2
-        run:  |
-          apt-get update && apt-get install unzip curl jq -y
-          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o /tmp/awscliv2.zip
-          unzip -q /tmp/awscliv2.zip -d /tmp
-          rm /tmp/awscliv2.zip
-          /tmp/aws/install --update
-          rm -rf /tmp/aws/
-
-      - name: Install dependencies
-        run: npm ci
-        
-      - name: Install Playwright Browsers
-        run: npx playwright install chromium --with-deps
-
-      - name: Run Tests in Demo environment 
-        run: npm run test-cases:demo
-        continue-on-error: true
-        env:
-          EMAIL_DEMO: '${{ secrets.EMAIL_DEMO }}'
-          PASSWORD_DEMO: '${{ secrets.PASSWORD_DEMO }}'
-          SECRET_DEMO: '${{ secrets.SECRET_DEMO }}'
-          URL_DEMO: '${{ secrets.URL_DEMO }}'
-          DEMO_CLOUD_AWS_ACCESS_KEY_ID: '${{ secrets.DEMO_CLOUD_AWS_ACCESS_KEY_ID }}'
-          DEMO_CLOUD_AWS_SECRET_ACCESS_KEY: '${{ secrets.DEMO_CLOUD_AWS_SECRET_ACCESS_KEY }}'
-
-      - name: Get current Time
-        uses: josStorer/get-current-time@v2
-        id: current-time
-        with:
-         format: DDMMYYYY-HHmm
-         timezone: Asia/Kolkata
-         
-      - name: Export time to Github Env
-        run: |
-          echo "F_TIME=${{ steps.current-time.outputs.formattedTime }}" >> $GITHUB_ENV
-
-      - name: Export vars to Github Env
-        run: | 
-          echo "HTML_REPORT=./reports/demo-report/report-${{ env.F_TIME }}.html" >> $GITHUB_ENV
-          echo "JSON_REPORT=./reports/demo-report/report-${{ env.F_TIME }}.json" >> $GITHUB_ENV
-          
-      - name: Attach Timestamp to the Report file
-        run: | 
-         mv ./reports/demo-report/report.html ${{ env.HTML_REPORT }}
-         mv ./reports/demo-report/report.json ${{ env.JSON_REPORT }} 
-                  
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-         name: demo-report
-         path: reports/
-         retention-days: 30
-  
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4 # Configure with AWS Credentials
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
-
-      - name: Copy files to the S3 Bucket
-        run: |
-             aws s3 cp ${{ env.HTML_REPORT }} s3://reports.accuknox.com/reports/demo/
-             echo "::notice title=HTML report url for Demo Env::http://reports.accuknox.com/reports/demo/report-${{ env.F_TIME }}.html"
-      
-      - name: Read Summary Report to Get Test Results
-        if: always()
-        run: |
-            TOTAL_TESTS=$(cat ${{ env.JSON_REPORT }} | jq -r '.summary.tests.value')
-            PASSED=$(cat ${{ env.JSON_REPORT }} | jq -r '.summary.passed.value')
-            FAILED=$(cat ${{ env.JSON_REPORT }} | jq -r '.summary.failed.value')
-            FLAKY=$(cat ${{ env.JSON_REPORT }} | jq -r '.summary.flaky.value')
-            SKIPPED=$(cat ${{ env.JSON_REPORT }} | jq -r '.summary.skipped.value')
-            TOTAL_TIME=$(cat ${{ env.JSON_REPORT }} | jq -r '.durationH')
-            
-
-            echo "TOTAL_TESTS=$TOTAL_TESTS" >> $GITHUB_ENV
-            echo "PASSED=$PASSED" >> $GITHUB_ENV
-            echo "FAILED=$FAILED" >> $GITHUB_ENV 
-            echo "FLAKY=$FLAKY" >> $GITHUB_ENV
-            echo "SKIPPED=$SKIPPED" >> $GITHUB_ENV
-            echo "TOTAL_TIME=$TOTAL_TIME" >> $GITHUB_ENV
-
-      - name: Send Slack Notification
-        if: always()
-        uses: 8398a7/action-slack@v3
-        with:
-            icon_url: 'https://icons8.com/icon/VzEme0vRm6Aj/test'
-            status: custom
-            fields: repo,eventName,workflow,job,took
-            custom_payload: |
-             {
-              attachments: [{
-                color: '${{ env.PASSED }}' === '0' ? 'good' : '${{ env.FAILED }}' === '0' ? 'danger' : 'warning',
-                title: `E2E UI Testing: Demo Env :mag_right:`,
-                fields: [{
-                  title: 'Site Under Test',
-                  value: '${{ env.APP_URL }}',
-                  short: true
-                },
-                {
-                  title: 'Repo',
-                  value: `${process.env.AS_REPO}`,
-                  short: true
-                },
-                {
-                  title: 'Execution Time',
-                  value: `${{ env.TOTAL_TIME }}`,
-                  short: true
-                },
-                {
-                  title: 'Workflow',
-                  value: `${process.env.AS_WORKFLOW}`,
-                  short: true
-                },
-                {
-                  title: 'Total Tests',
-                  value: `${{ env.TOTAL_TESTS }}`,
-                  short: true
-                },
-                {
-                  title: 'Passed',
-                  value: `${{ env.PASSED }}`,
-                  short: true
-                },
-                {
-                  title: 'Skipped',
-                  value: `${{ env.SKIPPED }}`,
-                  short: true
-                },
-                {
-                  title: 'Flaky',
-                  value: `${{ env.FLAKY }}`,
-                  short: true
-                },
-                {
-                  title: 'Failures',
-                  value: `${{ env.FAILED }}`,
-                  short: false
-                },
-                {
-                  title: 'Demo Test Report URL',
-                  value: 'http://reports.accuknox.com/reports/demo/report-${{ env.F_TIME }}.html',
-                  short: false
-                }]
-              }]
-             }
-        env:
-              SLACK_WEBHOOK_URL: ${{ secrets.DEMO_SLACK_WEBHOOK }} # required
-              APP_URL: "https://app.demo.accuknox.com/"
+      # - name: Send Slack Notification
+      #   if: always()
+      #   uses: 8398a7/action-slack@v3
+      #   with:
+      #       icon_url: 'https://icons8.com/icon/VzEme0vRm6Aj/test'
+      #       status: custom
+      #       fields: repo,eventName,workflow,job,took
+      #       custom_payload: |
+      #        {
+      #         attachments: [{
+      #           color: '${{ env.PASSED }}' === '0' ? 'good' : '${{ env.FAILED }}' === '0' ? 'danger' : 'warning',
+      #           title: `E2E UI Testing: Stage Env :mag_right:`,
+      #           fields: [{
+      #             title: 'Site Under Test',
+      #             value: '${{ env.APP_URL }}',
+      #             short: true
+      #           },
+      #           {
+      #             title: 'Repo',
+      #             value: `${process.env.AS_REPO}`,
+      #             short: true
+      #           },
+      #           {
+      #             title: 'Execution Time',
+      #             value: `${{ env.TOTAL_TIME }}`,
+      #             short: true
+      #           },
+      #           {
+      #             title: 'Workflow',
+      #             value: `${process.env.AS_WORKFLOW}`,
+      #             short: true
+      #           },
+      #           {
+      #             title: 'Total Tests',
+      #             value: `${{ env.TOTAL_TESTS }}`,
+      #             short: true
+      #           },
+      #           {
+      #             title: 'Passed',
+      #             value: `${{ env.PASSED }}`,
+      #             short: true
+      #           },
+      #           {
+      #             title: 'Skipped',
+      #             value: `${{ env.SKIPPED }}`,
+      #             short: true
+      #           },
+      #           {
+      #             title: 'Flaky',
+      #             value: `${{ env.FLAKY }}`,
+      #             short: true
+      #           },
+      #           {
+      #             title: 'Failures',
+      #             value: `${{ env.FAILED }}`,
+      #             short: false
+      #           },
+      #           {
+      #             title: 'Stage Test Report URL',
+      #             value: 'http://reports.accuknox.com/reports/stage/report-${{ env.F_TIME }}.html',
+      #             short: false
+      #           }]
+      #         }]
+      #        }
+      #   env:
+      #         SLACK_WEBHOOK_URL: ${{ secrets.STAGE_SLACK_WEBHOOK }} # required
+      #         APP_URL: "https://app.stage.accuknox.com/"
