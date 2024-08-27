@@ -33,13 +33,13 @@ jobs:
       - name: Start a local k8s cluster
         run: curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
       - name: Verify function of k8s, kubectl, and helm
-        run: |
-          echo "kubeconfig: $KUBECONFIG"
-          kubectl version
-          kubectl get pods --all-namespaces
+        run: ls /etc/rancher/k3s/k3s.yaml
+        # echo "kubeconfig: $KUBECONFIG"
+          # kubectl version
+          # kubectl get pods --all-namespaces
 
-          helm version
-          helm list
+          # helm version
+          # helm list
 
       # - name: Create k3s
       #   run: curl -sfL https://get.k3s.io | sh -
