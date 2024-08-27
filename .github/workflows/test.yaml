@@ -7,17 +7,17 @@ jobs:
   stageTesting:
     name: 'Stage Testing'
     runs-on: ubuntu-latest
-    container:
-      image: mcr.microsoft.com/playwright:v1.45.2-jammy
+    # container:
+    #   image: mcr.microsoft.com/playwright:v1.45.2-jammy
     steps:
 
       
       # - uses: actions/checkout@v4
       #   with: 
       #     ref: stage
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 18
+      # - uses: actions/setup-node@v4
+      #   with:
+      #     node-version: 18
       # - name: Install dependencies
       #   run: npm install
       #
@@ -30,8 +30,10 @@ jobs:
       #     /tmp/aws/install --update
       #     rm -rf /tmp/aws/
       #
-      - name: Start a local k8s cluster
+      - name: Install k3d
         run: curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
+      - name: Create cluster
+        run: k3d cluster create
       - name: Verify function of k8s, kubectl, and helm
         run: ls /etc/rancher/k3s/k3s.yaml
         # echo "kubeconfig: $KUBECONFIG"
