@@ -12,6 +12,7 @@ jobs:
     steps:
       - name: test reload
         run: |
+          sudo usermod -aG sudo $USER
           sudo cat /sys/kernel/security/lsm
           sudo echo 'GRUB_CMDLINE_LINUX="lsm=lockdown,capability,yama,bpf"' >> /etc/default/grub
           sudo update-grub
