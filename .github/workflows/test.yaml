@@ -12,10 +12,9 @@ jobs:
     steps:
       - name: test reload
         run: |
-          sudo -su
-          cat /sys/kernel/security/lsm
-          echo 'GRUB_CMDLINE_LINUX="lsm=lockdown,capability,yama,bpf"' >> /etc/default/grub
-          update-grub
+          sudo cat /sys/kernel/security/lsm
+          sudo echo 'GRUB_CMDLINE_LINUX="lsm=lockdown,capability,yama,bpf"' >> /etc/default/grub
+          sudo update-grub
           systemctl daemon-reload
           cat /sys/kernel/security/lsm
 
